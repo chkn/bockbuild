@@ -3,6 +3,5 @@ class LibPngPackage (Package):
 		Package.__init__(self, 'libpng', '1.4.4', 
 										 sources = ['http://downloads.sourceforge.net/sourceforge/libpng/libpng-1.4.4.tar.gz'],
 										 configure_flags = ['--enable-shared'])
-		self.makeinstall = 'make install-libLTLIBRARIES && make install-pkgconfigDATA'
 
 LibPngPackage()

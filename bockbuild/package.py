@@ -82,14 +82,14 @@ class Package:
 
 		self.sources = local_sources
 
-	def package_root_dir (self, build_root = ''):
+	def package_root_dir (self, build_root = False):
 		source_cache = os.getenv('BOCKBUILD_SOURCE_CACHE')
 		if source_cache != None:
 			print 'Using BOCKBUILD_SOURCE_CACHE = %s' % source_cache
-		return source_cache or build_root
+		return source_cache or build_root or Package.profile.build_root
 
-	def package_dest_dir (self, build_root = ''):
-		return os.path.join (self.package_root_dir (build_root), '%s-%s' % (self.name, self.version))
+	def package_dest_dir (self, build_root = False):
+		return os.path.join (self.package_root_dir (build_root or Package.profile.build_root), '%s-%s' % (self.name, self.version))
 
 	def start_build (self):
 		Package.last_instance = None

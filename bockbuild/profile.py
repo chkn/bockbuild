@@ -5,10 +5,10 @@ from environment import Environment
 from package import *
 
 class Profile:
-	def __init__ (self):
+	def __init__ (self, prefix = False):
 		self.name = 'default'
 		self.build_root = os.path.join (os.getcwd (), 'build-root')
-		self.prefix = os.path.join (self.build_root, '_install')
+		self.prefix = prefix if prefix else os.path.join (self.build_root, '_install')
 		self.env = Environment (self)
 		self.env.set ('BUILD_PREFIX', self.prefix)
 		self.env.set ('BOCKBUILD_ENV', '1')

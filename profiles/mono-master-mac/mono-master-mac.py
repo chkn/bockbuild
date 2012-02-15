@@ -1,6 +1,6 @@
 #!/usr/bin/python -B
 
-import fileinput, glob, os, pprint, re, sys
+import fileinput, glob, os, pprint, re, sys, tempfile, shutil
 
 sys.path.append ('../..')
 
@@ -10,80 +10,39 @@ from packages import MonoMasterPackages
 
 class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 	def __init__ (self):
-		DarwinProfile.__init__ (self)
+		self.MONO_ROOT = "/Library/Frameworks/Mono.framework"
+		self.RELEASE_VERSION = "2.11" # REMEMBER TO UPDATE
+		self.BUILD_NUMBER = "0"
+		self.MRE_GUID = "432959f9-ce1b-47a7-94d3-eb99cb2e1aa8"
+		self.MDK_GUID = "964ebddd-1ffe-47e7-8128-5ce17ffffb05"
+
+		# Create the updateid
+		parts = self.RELEASE_VERSION.split(".")
+		version_list = ( parts + ["0"] * (3 - len(parts)) )[:4]
+		version_list = [version_list[i].zfill(2) for i in range (1,3)]
+		self.updateid = "".join(version_list)
+		self.updateid += self.BUILD_NUMBER.replace(".", "").zfill(9 - len(self.updateid))
+
+		versions_root = os.path.join (self.MONO_ROOT, "Versions")
+		self.release_root = os.path.join (versions_root, self.RELEASE_VERSION)
+
+		DarwinProfile.__init__ (self, self.release_root)
 		MonoMasterPackages.__init__ (self)
-		
+
 		self_dir = os.path.realpath (os.path.dirname (sys.argv[0]))
+		self.packaging_dir = os.path.join (self_dir, "packaging")
+
 		aclocal_dir = os.path.join (self.prefix, "share", "aclocal")
 		if not os.path.exists(aclocal_dir):
 			os.makedirs (aclocal_dir)
 
-		self.RELEASE_VERSION = "2.11" # REMEMBER TO UPDATE
-
-
-	def install_root (self, subdir):
-		return r"(/\w+)+/bockbuild/profiles/mono-master-mac/build-root/_install/%s/" % subdir
-
 	def framework_path (self, subdir):
-		return "/Library/Frameworks/Mono.framework/Versions/%s/%s/" % (self.RELEASE_VERSION, subdir)
-
-	def relocate_pc_files (self):
-		pkgconfig_dir = os.path.join (self.prefix, "lib", "pkgconfig")
-		print pkgconfig_dir
-		print "Processing .pc files"
-		for pc in glob.glob ("%s/*.pc" % pkgconfig_dir):
-			print os.path.basename (pc) + " ",
-			for line in fileinput.input (os.path.join (pkgconfig_dir, pc), inplace = 1):
-				if re.compile (r'^prefix=.*').match (line):
-					print 'prefix=${pcfiledir}/../..'
-				else:
-					print line,
-		print
-
-	def is_type (self, file, type):
-		result = backtick ("file " + file)[0]
-		return result.find (type) > 0
-
-	def relocate (self, subdir):
-		for root, dirs, files in os.walk (os.path.join (self.prefix, subdir)):
-			if re.search ("\.git", root): pass
-			print "Relocating: %s" % root
-			for file in files:
-				f = os.path.join (root, file)
-				if os.path.islink (f): pass
-				if self.is_type (f, "Mach-O"):
-					self.relocate_mach_o (f, file)
-				elif self.is_type (f, "shell script"):
-					self.relocate_shell_script (f)
-			print
-
-	def relocate_mach_o (self, file, name):
-		print os.path.basename (file) + " ",
-		run_shell ("install_name_tool -id %s %s" % (os.path.join (self.framework_path ("lib"), name), file))
-		otool_output = backtick ("otool -L %s" % file)
-		lib = r"((\w+)+/bockbuild/profiles/.*/build-root/_install/lib/(\S+\.dylib))"
-		substitutions = []
-		for output in otool_output:
-			match = re.search (lib, output)
-			if match:
-				# root = self.framework_path ("lib")
-				root = "@loader_path"
-				substitutions.append ([match.group (1), os.path.join (root, match.group (3)), file])
-				for old, new, file in substitutions:
-					run_shell ("install_name_tool -change %s %s %s" % (old, new, file))
-
-	def relocate_shell_script (self, file):
-		print os.path.basename (file) + " ",
-		for line in fileinput.input (file, inplace = 1):
-			line = re.sub (self.install_root ("bin"), self.framework_path ("bin"), line)
-			line = re.sub (self.install_root ("lib"), self.framework_path ("lib"), line)
-			print line,
+		return os.path.join (self.prefix, subdir)
 
 	def remove_files (self, subdir = "lib", prefix = "*"):
 		dir = os.path.join (self.prefix, subdir)
-		print "Removing la files in " + dir
-		for la in backtick ('find %s -name "%s"' % (dir, prefix)):
-			os.remove (la)
+		print "Removing %s files in %s" % (prefix, dir)
+		backtick ('find %s -name "%s" -delete' % (dir, prefix))
 
 	def include_libgdiplus (self):
 		config = os.path.join (self.prefix, "etc", "mono", "config")
@@ -100,38 +59,88 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 
 		os.rename(temp, config)
 
-	def make_package_symlinks(self):
+	def make_package_symlinks(self, root):
+		os.symlink (self.prefix, os.path.join (root, "Versions", "Current"))
+		links = [
+			("bin", "Commands"),
+			("include", "Headers"),
+			("lib", "Libraries"),
+			("", "Home"),
+			(os.path.join ("lib", "libmono-2.0.dylib"), "Mono")
+		]
+		for srcname, destname in links:
+			src  = os.path.join (self.prefix, srcname)
+			dest = os.path.join (root, destname)
+			if os.path.exists (dest):
+				os.unlink (dest)
+			os.symlink (src, dest)
 
-		base = os.path.join(self.prefix, "Library", "Frameworks", "Mono.framework", "Versions", "Current")
-		print "path %s" % base
-		# os.mkdir(path)
-		os.symlink (os.path.join (self.prefix, "bin"),     os.path.join (base, "Commands"))
-		os.symlink (os.path.join (self.prefix, "include"), os.path.join (base, "Headers"))
-		os.symlink (os.path.join (self.prefix, "lib"),     os.path.join (base, "Libraries"))
-		os.symlink (os.path.join (base, "Current"),        os.path.join (base, "Home"))
-		os.symlink (os.path.join (self.prefix, "lib", "libmono-2.0.dylib"), os.path.join (base, "Mono"))
+	def prepare_package (self):
+		tmpdir = tempfile.mkdtemp()
+		monoroot = os.path.join (tmpdir, "PKGROOT", self.MONO_ROOT[1:])
+		versions = os.path.join (monoroot, "Versions")
+		os.makedirs (versions)
 
-	def prepare_package_layout (self):
-		self.make_package_symlinks()
+		# setup metadata
+		backtick ('rsync -aP %s/* %s' % (self.packaging_dir, tmpdir))
+		parameter_map = {
+			'@@MONO_VERSION@@': self.RELEASE_VERSION,
+			'@@MONO_RELEASE@@': self.BUILD_NUMBER,
+			'@@MONO_VERSION_RELEASE@@': self.RELEASE_VERSION + '_' + self.BUILD_NUMBER,
+			'@@MONO_PACKAGE_GUID@@': self.MRE_GUID,
+			'@@MONO_CSDK_GUID@@': self.MDK_GUID,
+			'@@MONO_VERSION_RELEASE_INT@@': self.updateid,
+			'@@PACKAGES@@': "FIXME",
+			'@@DEP_PACKAGES@@': "FIXME"
+		}
+		for dirpath, d, files in os.walk (tmpdir):
+			for name in files:
+				if not name.startswith('.'):
+					replace_in_file (os.path.join (dirpath, name), parameter_map)
 
-	def run_package_maker (pkg = 'pkg', pkg_root = 'pkg_root', resources_dir = 'resources_dir',
-												 info_plist = 'info.plist', description_plist = 'description.plist'):x
+		self.make_package_symlinks(monoroot)
+
+		# copy to package root	
+		backtick ('rsync -aP %s %s' % (self.release_root, versions))
+
+		return tmpdir
+
+	def run_package_maker (self, output, prepared_package, title):
 		packagemaker = '/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker'
-		cmd = ' '.join([packagemaker, '-build', '-p', pkg, '-f', pkg_root, '-r', resources_dir, '-i', info_plist, '-d', description_plist])
-		print cmd
-		# self.run_shell (cmd)
+		cmd = ' '.join([packagemaker,
+
+			"--resources '%s/resources'" % prepared_package,
+			"--info '%s/Info.plist'" % prepared_package,
+			"--root '%s/PKGROOT'" % prepared_package,
+
+			"--out '%s'" % output,
+			"--title '%s'" % title,
+			"-x '.DS_Store'"
+		])
+		#print cmd
+		backtick (cmd)
+
+	def make_dmg (self, output, package, volname):
+		dmgroot = os.path.join (os.path.dirname (package), "DMGROOT")
+		os.mkdir (dmgroot)
+		backtick ('mv %s %s' % (package, dmgroot))
+		backtick ('hdiutil create -ov -srcfolder %s -volname %s %s' % (dmgroot, volname, output))
 
 	def build_package (self):
-		self.prepare_package_layout ()
-		self.run_package_maker ()
+		out_path = os.getcwd ()
+		tmp_path = self.prepare_package ()
+
+		mdk_path = os.path.join (tmp_path, "MonoFramework-MDK-%s.macos10.xamarin.x86.pkg" % self.RELEASE_VERSION)
+		mdk_dmg_path = os.path.join (out_path, "MonoFramework-MDK-%s.macos10.xamarin.x86.dmg" % self.RELEASE_VERSION)
+		self.run_package_maker (mdk_path, tmp_path, 'Mono Framework MDK ' + self.RELEASE_VERSION)
+		self.make_dmg (mdk_dmg_path, mdk_path, 'MonoFramework-MDK-' + self.RELEASE_VERSION)
+		
+		shutil.rmtree (tmp_path)
 
 	# THIS IS THE MAIN METHOD FOR MAKING A PACKAGE
 	def package (self):
 		self.remove_files (prefix = '*.la')
 		self.remove_files (prefix = '*.a')
-		self.relocate_pc_files ()
-		self.relocate ("bin")
-		self.relocate ("lib")
 		self.include_libgdiplus ()
 		self.build_package ()
 

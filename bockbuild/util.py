@@ -3,6 +3,7 @@ import glob
 import os
 import sys
 import subprocess
+import fileinput
 
 def log (level, message):
 	if level == 0:
@@ -50,6 +51,13 @@ def expand_macros (node, vars):
 			node = v
 
 	return node
+
+def replace_in_file(filename, word_dic):
+	rc = re.compile('|'.join(map(re.escape, word_dic)))
+	def translate(match):
+		return word_dic[match.group(0)]
+	for line in fileinput.FileInput(filename, inplace=1):
+		print rc.sub(translate, line)
 
 def run_shell (cmd, print_cmd = False):
 	if print_cmd: print cmd

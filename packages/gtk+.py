@@ -5,13 +5,12 @@ class GtkPackage (GnomePackage):
 			version_minor = '8',
 			configure_flags = [
 				'--with-gdktarget=%{gdk_target}',
-				'--prefix="/Library/Frameworks/Mono.framework/Versions/Current"' if Package.profile.name == 'darwin' else '--prefix="%{prefix}"'
+				'--prefix="%{prefix}"'
 #				'--disable-cups',
 			]
 		)
 		self.configure = './configure'
 		self.gdk_target = 'x11'
-		self.makeinstall = 'make install DESTDIR="%{prefix}"'
 
 		if Package.profile.name == 'darwin':
 			self.gdk_target = 'quartz'
@@ -46,15 +45,13 @@ class GtkPackage (GnomePackage):
 
 	def install(self):
 		Package.install(self)
-		# Strip out self.prefix from the install root
-		self.sh('rsync -azP %{prefix}/Library/Frameworks/Mono.framework/Versions/Current/* %{prefix}')
-		self.sh('rm -rf %{prefix}/Library/')
-		
 		self.install_gtkrc ()
 
 	def install_gtkrc(self):
-		origin = os.path.join (self.package_dest_dir (), self.sources[1])
-		destination = "%s/etc/gtk-2.0/gtkrc" % self.prefix
-		self.sh('cp %s %s' % (origin, destination))
-		
+		origin = os.path.join (self.package_dest_dir (), os.path.basename (self.sources[1]))
+		destdir = os.path.join (self.prefix, "etc", "gtk-2.0")
+		if not os.path.exists (destdir):
+			os.makedirs(destdir)
+		self.sh('cp %s %s' % (origin, destdir))
+
 GtkPackage ()

@@ -1,7 +1,0 @@
-#!/bin/sh
-VERSION="REPLACE ME"
-
-if [ -z "$PKG_CONFIG_LIBDIR" ]; then
-	export PKG_CONFIG_LIBDIR=/Library/Frameworks/Mono.framework/Versions/$VERSION/lib/pkgconfig:/Library/Frameworks/Mono.framework/Versions/$VERSION/share/pkgconfig:/Library/Frameworks/Mono.framework/Versions/$VERSION/local/lib/pkgconfig:/Library/Frameworks/Mono.framework/Versions/$VERSION/local/share/pkgconfig:/Library/Frameworks/Mono.framework/Versions/$VERSION/lib/pkgconfig:/Library/Frameworks/Mono.framework/Versions/$VERSION/share/pkgconfig
-fi
-/Library/Frameworks/Mono.framework/Versions/$VERSION/bin/pkg-config.bin "$@"
