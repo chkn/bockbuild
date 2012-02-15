@@ -4,3 +4,4 @@ solitary/Options.cs
 solitary/Solitary.exe*
 *.pyc
 *~
+.DS_Store
