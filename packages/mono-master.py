@@ -5,7 +5,8 @@ class MonoMasterPackage(Package):
 			sources = ['git://github.com/mono/mono'],
 			configure_flags = [
 				'--enable-nls=no',
-				'--prefix=' + Package.profile.prefix
+				'--prefix=' + Package.profile.prefix,
+				'--with-ikvm=yes'
 			],
 			source_dir_name = "mono-2.11.git"
 		)
@@ -13,6 +14,7 @@ class MonoMasterPackage(Package):
 			self.configure_flags.extend([
 					# fix build on lion, it uses 64-bit host even with -m32
 					'--build=i386-apple-darwin11.2.0',
+					'--enable-loadedllvm'
 					])
 			self.sources.extend(['patches/pkg-config'])
 

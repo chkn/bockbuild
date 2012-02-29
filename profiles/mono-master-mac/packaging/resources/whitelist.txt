@@ -25,10 +25,10 @@ dtd2xsd
 fastcgi-mono-server
 fastcgi-mono-server2
 fastcgi-mono-server4
-fsc
-fsc2
-fsi
-fsi2
+fsharpc
+fsharpc2
+fsharpi
+fsharpi2
 gacutil
 gacutil2
 gapi2-codegen

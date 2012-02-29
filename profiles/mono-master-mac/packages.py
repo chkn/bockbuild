@@ -18,6 +18,7 @@ class MonoMasterPackages:
 				'libpng.py',
 				'libjpeg.py',
 				'libtiff.py',
+				'libgif.py',
 				'libxml2.py',
 				'freetype.py',
 				'fontconfig.py',
@@ -30,6 +31,9 @@ class MonoMasterPackages:
 				'gdk-pixbuf.py',
 				'gtk+.py',
 				'libglade.py',
+				'sqlite.py',
+				'expat.py',
+				'ige-mac-integration.py'
 				])
 
 		# # Theme
@@ -42,12 +46,17 @@ class MonoMasterPackages:
 
 		# Mono
 		self.packages.extend([
+				'mono-llvm.py',
 				'mono-master.py',
 				'libgdiplus.py',
+				'xsp.py',
 				'gtk-sharp-2.12-release.py',
-				# 'boo.py',
+				'boo.py',
 				# 'nant.py',
+				# 'ironlangs.py',
+				'fsharp.py',
 				'mono-addins.py',
+				'mono-basic.py',
 				])
 
 		self.packages = [os.path.join('..', '..', 'packages', p) for p in self.packages]

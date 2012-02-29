@@ -1,6 +1,6 @@
 #!/usr/bin/python -B
 
-import fileinput, glob, os, pprint, re, sys, tempfile, shutil
+import fileinput, glob, os, pprint, re, sys, tempfile, shutil, string
 
 sys.path.append ('../..')
 
@@ -19,9 +19,10 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 		# Create the updateid
 		parts = self.RELEASE_VERSION.split(".")
 		version_list = ( parts + ["0"] * (3 - len(parts)) )[:4]
-		version_list = [version_list[i].zfill(2) for i in range (1,3)]
-		self.updateid = "".join(version_list)
-		self.updateid += self.BUILD_NUMBER.replace(".", "").zfill(9 - len(self.updateid))
+		for i in range(1,3):
+			version_list [i] = version_list [i].zfill (2)
+		self.updateid = "".join (version_list)
+		self.updateid += self.BUILD_NUMBER.replace (".", "").zfill (9 - len (self.updateid))
 
 		versions_root = os.path.join (self.MONO_ROOT, "Versions")
 		self.release_root = os.path.join (versions_root, self.RELEASE_VERSION)
@@ -75,7 +76,12 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 				os.unlink (dest)
 			os.symlink (src, dest)
 
-	def prepare_package (self):
+	# creates and returns the path to a working directory containing:
+	#   PKGROOT/ - this root will be bundled into the .pkg and extracted at /
+	#   uninstallMono.sh - copied onto the DMG
+	#   Info{_sdk}.plist - used by packagemaker to make the installer
+	#   resources/ - other resources used by packagemaker for the installer
+	def setup_working_dir (self):
 		tmpdir = tempfile.mkdtemp()
 		monoroot = os.path.join (tmpdir, "PKGROOT", self.MONO_ROOT[1:])
 		versions = os.path.join (monoroot, "Versions")
@@ -90,8 +96,8 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 			'@@MONO_PACKAGE_GUID@@': self.MRE_GUID,
 			'@@MONO_CSDK_GUID@@': self.MDK_GUID,
 			'@@MONO_VERSION_RELEASE_INT@@': self.updateid,
-			'@@PACKAGES@@': "FIXME",
-			'@@DEP_PACKAGES@@': "FIXME"
+			'@@PACKAGES@@': string.join (set([root for root,ext in map(os.path.splitext, os.listdir (self.build_root))]), "\\\n"),
+			'@@DEP_PACKAGES@@': ""
 		}
 		for dirpath, d, files in os.walk (tmpdir):
 			for name in files:
@@ -101,41 +107,64 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 		self.make_package_symlinks(monoroot)
 
 		# copy to package root	
-		backtick ('rsync -aP %s %s' % (self.release_root, versions))
+		backtick ('rsync -aP "%s" "%s"' % (self.release_root, versions))
 
 		return tmpdir
 
-	def run_package_maker (self, output, prepared_package, title):
+	def apply_blacklist (self, working_dir, blacklist_name):
+		blacklist = os.path.join (working_dir, blacklist_name)
+		root = os.path.join (working_dir, "PKGROOT", self.release_root[1:])
+		backtick (blacklist + ' "%s"' % root)
+
+	def run_package_maker (self, working_dir, pkg_file_name, title):
 		packagemaker = '/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker'
+		output = os.path.join (working_dir, pkg_file_name)
 		cmd = ' '.join([packagemaker,
 
-			"--resources '%s/resources'" % prepared_package,
-			"--info '%s/Info.plist'" % prepared_package,
-			"--root '%s/PKGROOT'" % prepared_package,
+			"--resources '%s/resources'" % working_dir,
+			"--info '%s/Info.plist'" % working_dir,
+			"--root '%s/PKGROOT'" % working_dir,
 
 			"--out '%s'" % output,
 			"--title '%s'" % title,
 			"-x '.DS_Store'"
 		])
-		#print cmd
 		backtick (cmd)
+		return output
 
-	def make_dmg (self, output, package, volname):
-		dmgroot = os.path.join (os.path.dirname (package), "DMGROOT")
-		os.mkdir (dmgroot)
-		backtick ('mv %s %s' % (package, dmgroot))
-		backtick ('hdiutil create -ov -srcfolder %s -volname %s %s' % (dmgroot, volname, output))
+	def make_updateinfo (self, working_dir, guid):
+		with open(os.path.join (working_dir, "PKGROOT", self.release_root[1:], "updateinfo"), "w") as updateinfo:
+			updateinfo.write (guid + ' ' + self.updateid + "\n")
+
+	def make_dmg (self, output, title, *contents):
+		dmgroot = tempfile.mkdtemp()
+		backtick ('rsync -aP "%s" "%s"' % ('" "'.join (contents), dmgroot))
+		backtick ('hdiutil create -ov -srcfolder "%s" -volname "%s" "%s"' % (dmgroot, title, output))
+		shutil.rmtree (dmgroot)
 
 	def build_package (self):
 		out_path = os.getcwd ()
-		tmp_path = self.prepare_package ()
+		working = self.setup_working_dir ()
 
-		mdk_path = os.path.join (tmp_path, "MonoFramework-MDK-%s.macos10.xamarin.x86.pkg" % self.RELEASE_VERSION)
-		mdk_dmg_path = os.path.join (out_path, "MonoFramework-MDK-%s.macos10.xamarin.x86.dmg" % self.RELEASE_VERSION)
-		self.run_package_maker (mdk_path, tmp_path, 'Mono Framework MDK ' + self.RELEASE_VERSION)
-		self.make_dmg (mdk_dmg_path, mdk_path, 'MonoFramework-MDK-' + self.RELEASE_VERSION)
-		
-		shutil.rmtree (tmp_path)
+		mre_dmg = os.path.join (out_path, "MonoFramework-MRE-%s.macos10.xamarin.x86.dmg" % self.RELEASE_VERSION)
+		mdk_dmg = os.path.join (out_path, "MonoFramework-MDK-%s.macos10.xamarin.x86.dmg" % self.RELEASE_VERSION)
+		uninstall_script = os.path.join (working, "uninstallMono.sh")
+
+		# make the MDK
+		title = 'Mono Framework MDK ' + self.RELEASE_VERSION
+		self.apply_blacklist (working, 'mdk_blacklist.sh')
+		self.make_updateinfo (working, self.MDK_GUID)
+		mdk_pkg = self.run_package_maker (working, "MonoFramework-MDK-%s.macos10.xamarin.x86.pkg" % self.RELEASE_VERSION, title)
+		self.make_dmg (mdk_dmg, title, mdk_pkg, uninstall_script)
+
+		# make the MRE
+		title = 'Mono Framework MRE ' + self.RELEASE_VERSION
+		self.apply_blacklist (working, 'mre_blacklist.sh')
+		self.make_updateinfo (working, self.MRE_GUID)
+		mre_pkg = self.run_package_maker (working, "MonoFramework-MRE-%s.macos10.xamarin.x86.pkg" % self.RELEASE_VERSION, title)
+		self.make_dmg (mre_dmg, title, mre_pkg, uninstall_script)
+
+		shutil.rmtree (working)
 
 	# THIS IS THE MAIN METHOD FOR MAKING A PACKAGE
 	def package (self):

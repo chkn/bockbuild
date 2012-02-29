@@ -1,6 +1,1 @@
-class XspPackage (Package):
-	def __init__(self):
-		Package.__init__ (self, 'xsp', '2.10.2')
-		self.sources = ['http://ftp.novell.com/pub/mono/sources/xsp/xsp-2.10.2.tar.bz2']
-
-XspPackage ()
+GitHubTarballPackage('mono', 'xsp', '2.11', 'd3e2f80ff59ddff68e757a520655555e2fbf2695', configure = './autogen.sh --prefix="%{prefix}"')  

@@ -9,19 +9,19 @@ class DarwinProfile (UnixProfile):
 		UnixProfile.__init__ (self, prefix)
 		
 		self.name = 'darwin'
-		if (os.path.isdir ('/Developer/SDKs/MacOSX10.7.sdk')):
-			self.mac_sdk_path = '/Developer/SDKs/MacOSX10.7.sdk'
-			self.gcc_flags.extend ([
-				'-D_XOPEN_SOURCE',
-				'-isysroot %{mac_sdk_path}',
-				'-mmacosx-version-min=10.7',
-			])
-		elif (os.path.isdir ('/Developer/SDKs/MacOSX10.6.sdk')):
+		if (os.path.isdir ('/Developer/SDKs/MacOSX10.6.sdk')):
 			self.mac_sdk_path = '/Developer/SDKs/MacOSX10.6.sdk'
 			self.gcc_flags.extend ([
 				'-D_XOPEN_SOURCE',
 				'-isysroot %{mac_sdk_path}',
 				'-mmacosx-version-min=10.6',
+			])
+		elif (os.path.isdir ('/Developer/SDKs/MacOSX10.7.sdk')):
+			self.mac_sdk_path = '/Developer/SDKs/MacOSX10.7.sdk'
+			self.gcc_flags.extend ([
+				'-D_XOPEN_SOURCE',
+				'-isysroot %{mac_sdk_path}',
+				'-mmacosx-version-min=10.7',
 			])
 		else:
 			raise IOError ('Mac OS X SDKs 10.6 and 10.7 not found')
@@ -31,12 +31,12 @@ class DarwinProfile (UnixProfile):
 		self.gcc_flags.extend (self.gcc_arch_flags)
 		self.ld_flags.extend (self.gcc_arch_flags)
 
-		if (os.path.isfile ('/usr/bin/gcc-4.2')):
-			self.env.set ('CC',  'gcc-4.2')
-			self.env.set ('CXX', 'g++-4.2')
-		else:
-			self.env.set ('CC',  'gcc')
-			self.env.set ('CXX', 'g++')
+		#if (os.path.isfile ('/usr/bin/gcc-4.2')):
+		#	self.env.set ('CC',  'gcc-4.2')
+		#	self.env.set ('CXX', 'g++-4.2')
+		#else:
+		self.env.set ('CC',  'gcc')
+		self.env.set ('CXX', 'g++')
 
 	def bundle (self):
 		self.make_app_bundle ()
