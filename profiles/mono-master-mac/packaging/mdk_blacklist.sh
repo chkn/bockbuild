@@ -31,3 +31,4 @@ rm -rf share/themes/ThinIce
 rm -rf share/info
 rm -rf share/icons/gnome
 rm -rf share/icons/hicolor
+rm -rf share/gettext/*.class
