@@ -53,7 +53,7 @@ class MonoMasterPackages:
 				'gtk-sharp-2.12-release.py',
 				'boo.py',
 				# 'nant.py',
-				# 'ironlangs.py',
+				'ironlangs.py',
 				'fsharp.py',
 				'mono-addins.py',
 				'mono-basic.py',
