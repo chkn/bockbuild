@@ -6,9 +6,9 @@ sys.path.append ('../..')
 
 from bockbuild.darwinprofile import DarwinProfile
 from bockbuild.util import *
-from packages import MonoMasterPackages
+from packages import MonoReleasePackages
 
-class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
+class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 	def __init__ (self):
 		self.MONO_ROOT = "/Library/Frameworks/Mono.framework"
 		self.RELEASE_VERSION = "2.11" # REMEMBER TO UPDATE
@@ -28,7 +28,7 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 		self.release_root = os.path.join (versions_root, self.RELEASE_VERSION)
 
 		DarwinProfile.__init__ (self, self.release_root)
-		MonoMasterPackages.__init__ (self)
+		MonoReleasePackages.__init__ (self)
 
 		self_dir = os.path.realpath (os.path.dirname (sys.argv[0]))
 		self.packaging_dir = os.path.join (self_dir, "packaging")
@@ -173,9 +173,9 @@ class MonoMasterProfile (DarwinProfile, MonoMasterPackages):
 		self.include_libgdiplus ()
 		self.build_package ()
 
-MonoMasterProfile ().build ()
+MonoReleaseProfile ().build ()
 
-profname = "mono-master-mac-env"
+profname = "mono-mac-release-env"
 dir = os.path.realpath (os.path.dirname (sys.argv[0]))
 envscript = '''#!/bin/sh
 PROFNAME="%s"

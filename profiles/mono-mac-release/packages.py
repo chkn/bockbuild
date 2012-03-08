@@ -1,7 +1,7 @@
 import os
 from bockbuild.darwinprofile import DarwinProfile
 
-class MonoMasterPackages:
+class MonoReleasePackages:
 	def __init__(self):
 
 		# Toolchain
@@ -47,7 +47,7 @@ class MonoMasterPackages:
 		# Mono
 		self.packages.extend([
 				'mono-llvm.py',
-				'mono-master.py',
+				'mono.py',
 				'libgdiplus.py',
 				'xsp.py',
 				'gtk-sharp-2.12-release.py',
