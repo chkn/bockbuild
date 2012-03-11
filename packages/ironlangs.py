@@ -10,8 +10,8 @@ class IronLanguagesPackage(GitHubTarballPackage):
 			'de63773744ccf9873c1826470730ae0446fd64d7',
 			configure = '')
 
-		self.ironruby = os.path.join (self.source_dir_name, 'ironruby', 'bin') + os.sep
-		self.ironpython = os.path.join (self.source_dir_name,'ironpython', 'bin') + os.sep
+		self.ironruby = os.path.join (os.getcwd(), self.source_dir_name, 'ironruby', 'bin') + os.sep
+		self.ironpython = os.path.join (os.getcwd(), self.source_dir_name,'ironpython', 'bin') + os.sep
 
 	def build (self):
 		self.sh ('xbuild /p:Configuration=Release /p:OutDir="%{ironruby}" Solutions/Ruby.sln')
