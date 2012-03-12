@@ -30,8 +30,8 @@ class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 		DarwinProfile.__init__ (self, self.release_root)
 		MonoReleasePackages.__init__ (self)
 
-		self_dir = os.path.realpath (os.path.dirname (sys.argv[0]))
-		self.packaging_dir = os.path.join (self_dir, "packaging")
+		self.self_dir = os.path.realpath (os.path.dirname (sys.argv[0]))
+		self.packaging_dir = os.path.join (self.self_dir, "packaging")
 
 		aclocal_dir = os.path.join (self.prefix, "share", "aclocal")
 		if not os.path.exists(aclocal_dir):
@@ -143,7 +143,7 @@ class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 		shutil.rmtree (dmgroot)
 
 	def build_package (self):
-		out_path = os.getcwd ()
+		out_path = self.self_dir
 		working = self.setup_working_dir ()
 
 		mre_dmg = os.path.join (out_path, "MonoFramework-MRE-%s.macos10.xamarin.x86.dmg" % self.RELEASE_VERSION)
@@ -155,6 +155,7 @@ class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 		self.apply_blacklist (working, 'mdk_blacklist.sh')
 		self.make_updateinfo (working, self.MDK_GUID)
 		mdk_pkg = self.run_package_maker (working, "MonoFramework-MDK-%s.macos10.xamarin.x86.pkg" % self.RELEASE_VERSION, title)
+		print "Saving: " + mdk_dmg
 		self.make_dmg (mdk_dmg, title, mdk_pkg, uninstall_script)
 
 		# make the MRE
@@ -162,6 +163,7 @@ class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 		self.apply_blacklist (working, 'mre_blacklist.sh')
 		self.make_updateinfo (working, self.MRE_GUID)
 		mre_pkg = self.run_package_maker (working, "MonoFramework-MRE-%s.macos10.xamarin.x86.pkg" % self.RELEASE_VERSION, title)
+		print "Saving: " + mre_dmg
 		self.make_dmg (mre_dmg, title, mre_pkg, uninstall_script)
 
 		shutil.rmtree (working)
@@ -171,6 +173,8 @@ class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 		self.remove_files (prefix = '*.la')
 		self.remove_files (prefix = '*.a')
 		self.include_libgdiplus ()
+		# must apply blacklist first here because PackageMaker follows symlinks :(
+		backtick (os.path.join (self.packaging_dir, 'mdk_blacklist.sh') + ' ' + self.release_root)
 		self.build_package ()
 
 MonoReleaseProfile ().build ()
