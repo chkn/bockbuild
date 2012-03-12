@@ -127,7 +127,8 @@ class MonoReleaseProfile (DarwinProfile, MonoReleasePackages):
 
 			"--out '%s'" % output,
 			"--title '%s'" % title,
-			"-x '.DS_Store'"
+			"-x '.DS_Store'",
+			"--verbose"
 		])
 		backtick (cmd)
 		return output
