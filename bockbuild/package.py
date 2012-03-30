@@ -80,7 +80,7 @@ class Package:
 					self.sh ('%{git} pull --rebase')
 				revision = os.getenv('BUILD_REVISION')
 				if revision != None:
-					print 'Checking out build revision: %s' % revision
+					self.cd (local_dest_file)
 					self.sh ('%' + '{git} reset --hard %s' % revision)
 				os.chdir (pwd)
 
