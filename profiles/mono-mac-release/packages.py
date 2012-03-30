@@ -47,7 +47,7 @@ class MonoReleasePackages:
 		# Mono
 		self.packages.extend([
 				'mono-llvm.py',
-				'mono.py',
+				'mono-master.py',
 				'libgdiplus.py',
 				'xsp.py',
 				'gtk-sharp-2.12-release.py',

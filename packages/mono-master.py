@@ -6,7 +6,8 @@ class MonoMasterPackage(Package):
 			configure_flags = [
 				'--enable-nls=no',
 				'--prefix=' + Package.profile.prefix,
-				'--with-ikvm=yes'
+				'--with-ikvm=yes',
+				'--with-moonlight=no'
 			],
 			source_dir_name = "mono-2.11.git"
 		)
