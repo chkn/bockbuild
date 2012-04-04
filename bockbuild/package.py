@@ -77,6 +77,8 @@ class Package:
 					self.sh ('%' + '{git} clone "%s" "%s"' % (source, os.path.basename (local_dest_file)))
 				else:
 					self.cd (local_dest_file)
+					self.sh ('%{git} reset --hard')
+					self.sh ('%{git} clean -xfd')
 					self.sh ('%{git} pull --rebase')
 				revision = os.getenv('BUILD_REVISION')
 				if revision != None:
